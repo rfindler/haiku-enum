@@ -75,9 +75,9 @@
  ducks dunes dwarfs ears eels eggs elks elms elves ewes eyes fears fiends
  fires firs fish fists flames fleas flutes fools friends fruits geese gems
  ghosts ghouls girls gnats gnomes goats graves hags hairs hands harps hawks
- heads hearts hives hogs horses jugs knives lakes lambs lamps leaves lights
+ heads hearts hives hogs jugs knives lakes lambs lamps leaves lights
  lips lives masks men mice mists mobs monks moons moose moths mules nymphs
- oafs oaks owls pains palms peaches pearls pears pigs pikes pines ploughs
+ oafs oaks owls pains palms pearls pears pigs pikes pines ploughs
  plows plums ponds prey priests prunes queens rats rogues sharks sheep ships
  smiles snails snakes snows souls sounds spears stags stars stones streams
  suns swine teeth thieves trees waifs wasps wives yews
@@ -96,13 +96,13 @@
  fingers firewood firstborns fishbones fishhooks flowers foghorns foundlings
  fountains frostbites gazelles geldings ginkgos giraffes glaciers goatherds
  gravestones graveyards groundhogs guitars gypsies harpies harvests
- hatchets hawthornes haystacks hermits herons horseflies horsemen hostages
+ hatchets hawthornes haystacks hermits herons horseflies horsemen horses hostages
  hunchbacks images inmates insects insults islands jackals jackknifes
  jaguars jailers kingdoms kittens landlords lemons lepers lindens lions
  liquids lizards lovers madmen maidens maples martyrs meadows merchants
  mermaids misers monkeys moonbeams moonlights mountains mustangs nectars
  nightmares oceans olives onions orchards orchids orphans owners oysters
- pandas papers parrots partridges passions paupers peasants pebbles petals
+ pandas papers parrots partridges passions paupers peaches peasants pebbles petals
  phantoms pheasants pigeons piglets pirates planets plowboys plowmen
  plowshares poets ponies poplars princes puddles pumas pumpkins puppies
  pygmies quicksands rabbits raccoons racehorses rainfalls rainstorms
