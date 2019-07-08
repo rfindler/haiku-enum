@@ -1,20 +1,23 @@
 #lang haiku
 
 (starters
- (noun #:comma adjective1))
+ (adjective #:comma second-adjective))
 
-(rule adjective1 adjective ->
-      adjective2
-      noun)
+(rule first-adjective adjective ->
+      #:not-last #:comma second-adjective
+      #:not-last noun)
 
-(rule adjective2 adjective ->
-      noun)
+(rule second-adjective adjective ->
+      #:not-last noun)
 
 (rule noun ->
       verb)
 
 (rule verb ->
-      #:comma adjective1)
+       #:not-last combiner)
+
+(rule combiner ->
+      #:not-last first-adjective)
 
 @adjective[1]{black fierce gray plump wet}
 @adjective[2]{achy agile dormant mangy sober wrinkled}
@@ -28,3 +31,4 @@
 @verb[2]{awaits beckons gallops gambols slithers slobbers whimpers}
 @verb[3]{hesitates hibernates somersaults vanishes}
 @verb[4]{agonizes brutalizes hallucinates reconsiders regurgitates}
+@combiner[1]{while and before after}

@@ -181,10 +181,13 @@
 
 (define-syntax (parse-alternatives stx)
   (syntax-parse stx
-    [(_ #:not-last #:comma something more ...)
+    [(_ #:not-last #:comma something:id more ...)
      #'(cons (alternative #t #f #t (get-promise something))
              (parse-alternatives more ...))]
-    [(_ #:only-last something more ...)
+    [(_ #:not-last something:id more ...)
+     #'(cons (alternative #t #f #f (get-promise something))
+             (parse-alternatives more ...))]
+    [(_ #:only-last something:id more ...)
      #'(cons (alternative #f #t #f (get-promise something))
              (parse-alternatives more ...))]
     [(_ #:only-last whatever ...)
@@ -195,7 +198,7 @@
      (raise-syntax-error 'alternative
                          "#:not-last misplaced"
                          (list-ref (syntax->list stx) 1))]
-    [(_ #:comma something more ...)
+    [(_ #:comma something:id more ...)
      #'(cons (alternative #f #f #t (get-promise something))
              (parse-alternatives more ...))]
     [(_ something more ...)
