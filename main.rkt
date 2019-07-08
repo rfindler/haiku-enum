@@ -1,4 +1,27 @@
 #lang racket
+
+(module reader syntax/module-reader
+  haiku
+  #:read s:read
+  #:read-syntax s:read-syntax
+  #:info
+  (lambda (key defval filter)
+    (define (fallback) (filter key defval))
+    (define (try-dynamic-require lib export)
+      (with-handlers ([exn:missing-module?
+                       (λ (x) (fallback))])
+        (dynamic-require lib export)))
+    (case key
+      [(color-lexer)
+       (try-dynamic-require 'syntax-color/scribble-lexer 'scribble-lexer)]
+      [(drracket:indentation)
+       (try-dynamic-require 'scribble/private/indentation 'determine-spaces)]
+      [(drracket:keystrokes)
+       (try-dynamic-require 'scribble/private/indentation 'keystrokes)]
+      [else (fallback)]))
+  (require (prefix-in s: scribble/reader)
+           (prefix-in a: at-exp/lang/reader)))
+
 (require data/enumerate/lib
          racket/stxparam
          racket/splicing
@@ -66,10 +89,15 @@
 (define-syntax-parameter words-map-id-param #f)
 (define-syntax-parameter beats-map-id-param #f)
 
+(begin-for-syntax
+  (struct nt-compile-info (promise-id transformer)
+    #:property prop:procedure
+    (struct-field-index transformer)))
+
 (define-syntax (rule stx)
   (define-values (non-terminal-name emit alternatives)
     (syntax-parse stx
-    #:datum-literals (->)
+      #:datum-literals (->)
       [(_ non-terminal-name -> alternatives ...)
        (values #'non-terminal-name #f #'(alternatives ...))]
       [(_ non-terminal-name emit -> alternatives ...)
@@ -86,16 +114,16 @@
         #,@(if (and emit (not (syntax-local-value emit (λ () #f))))
                (list #`(define-syntax (#,emit stx)
                          (syntax-parse stx
-                           [x #:when (identifier? #'x) #'add-words]
+                           [x:id #'add-words]
                            [(x . y) #'(app add-words . y)])))
                (list))
         (define-syntax #,non-terminal-name
-          (case-lambda
-            [() #'the-promise]
-            [(stx)
+          (nt-compile-info
+           #'the-promise
+           (λ (stx)
              (syntax-case stx ()
                [x (identifier? #'x) #'add-words]
-               [(x . y) #'(app add-words . y)])])))))
+               [(x . y) #'(app add-words . y)])))))))
 
 
 ;                                                        
@@ -178,14 +206,12 @@
 (define-syntax (get-promise stx)
   (syntax-parse stx
     [(_ id)
-     (define the-promise-identifier
-       ((syntax-local-value
-         #'id
-         (λ ()
-           (raise-syntax-error 'haiku-lang.rkt "unknown part of speech" #'id)))))
+     (define the-nt (syntax-local-value #'id (λ () #f)))
+     (unless (nt-compile-info? the-nt)
+       (raise-syntax-error 'haiku-lang.rkt "unknown part of speech" #'id))
      #`(begin
          (λ () id) ;; for check syntax
-         #,the-promise-identifier)]))
+         #,(nt-compile-info-promise-id the-nt))]))
 
 (define-syntax (starters stx)
   (syntax-parse stx

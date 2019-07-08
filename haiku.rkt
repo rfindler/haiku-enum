@@ -1,4 +1,4 @@
-#lang at-exp s-exp "haiku-lang.rkt"
+#lang haiku
 
 (starters
  (plural-noun plural-verb)
