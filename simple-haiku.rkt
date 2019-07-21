@@ -1,4 +1,4 @@
-#lang haiku
+#lang haiku-enum
 
 (starters
  (adjective #:comma second-adjective))

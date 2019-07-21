@@ -1,7 +1,7 @@
 #lang racket
 
 (module reader syntax/module-reader
-  haiku
+  haiku-enum
   #:read s:read
   #:read-syntax s:read-syntax
   #:info
