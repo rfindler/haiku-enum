@@ -25,12 +25,14 @@
 (require data/enumerate/lib
          racket/stxparam
          racket/splicing
+         math/base
          (for-syntax syntax/parse))
 
 (define haiku-beats '(5 7 5))
 
 (provide rule starters
-         + - expt #%datum #%app * / round ceiling floor
+         ;+ - expt * / round ceiling floor
+         #%datum; #%app
          (rename-out [top-interaction #%top-interaction]
                      [module-begin #%module-begin]
                      [top #%top]))
@@ -62,10 +64,18 @@
 (define-syntax (module-begin stx)
   (syntax-parse stx
     [(_ all-the-codez ...)
-     (with-syntax ([structured-haiku/e-promise (datum->syntax stx 'structured-haiku/e-promise)]
-                   [haiku/e-promise (datum->syntax stx 'haiku/e-promise)]
-                   [structured-haiku/e (datum->syntax stx 'structured-haiku/e)]
-                   [haiku/e (datum->syntax stx 'haiku/e)])
+     (with-syntax ([(structured-haiku/e-promise
+                     haiku/e
+                     structured-haiku/e
+                     how-many-haiku
+                     nth-haiku
+                     random-haiku)
+                    (list (datum->syntax stx 'structured-haiku/e-promise)
+                          (datum->syntax stx 'haiku/e)
+                          (datum->syntax stx 'structured-haiku/e)
+                          (datum->syntax stx 'how-many-haiku)
+                          (datum->syntax stx 'nth-haiku)
+                          (datum->syntax stx 'random-haiku))])
        #'(#%plain-module-begin
           (define words-map (make-hash))
           (define beats-map (make-hash))
@@ -74,8 +84,22 @@
             all-the-codez ...
             (finalize-words-map-and-beats-map beats-map words-map)
             (define structured-haiku/e (force structured-haiku/e-promise))
-            (define haiku/e (force haiku/e-promise))
-            (provide structured-haiku/e haiku/e))))]))
+            (define haiku/e
+              (pam/e structured-haiku-to-string #:contract string?
+                     structured-haiku/e)))
+          (define-values (how-many-haiku nth-haiku random-haiku)
+            (make-the-exports haiku/e))
+          (provide structured-haiku/e haiku/e random-haiku
+                   how-many-haiku
+                   (contract-out
+                    [nth-haiku (-> (and/c natural? (</c how-many-haiku))
+                                   string?)]))))]))
+
+(define (make-the-exports haiku/e)
+  (define how-many-haiku (enum-count haiku/e))
+  (define (nth-haiku n) (from-nat haiku/e n))
+  (define (random-haiku) (nth-haiku (random-natural how-many-haiku)))
+  (values how-many-haiku nth-haiku random-haiku))
 
 (define-syntax (top-interaction stx)
   (syntax-parse stx
@@ -94,6 +118,17 @@
     #:property prop:procedure
     (struct-field-index transformer)))
 
+(begin-for-syntax
+  (define-syntax-class syllable
+    #:description "a syllable count (as a natural number)"
+    #:opaque
+    (pattern n:nat)))
+
+(define-for-syntax ((emit-transformer m add-words) stx)
+  (syntax-parse stx
+    [x:id add-words] ;; this shouldn't be needed
+    [(_ n:syllable . y) #`(#%app #,add-words n . y)]))
+
 (define-syntax (rule stx)
   (define-values (non-terminal-name emit alternatives)
     (syntax-parse stx
@@ -102,8 +137,7 @@
        (values #'non-terminal-name #f #'(alternatives ...))]
       [(_ non-terminal-name emit -> alternatives ...)
        (values #'non-terminal-name #'emit #'(alternatives ...))]))
-  (with-syntax ([app #'#%app]
-                [words-map-id (syntax-parameter-value #'words-map-id-param)]
+  (with-syntax ([words-map-id (syntax-parameter-value #'words-map-id-param)]
                 [beats-map-id (syntax-parameter-value #'beats-map-id-param)])
     #`(begin
         (define (add-words beats . words)
@@ -112,18 +146,12 @@
           (delay (non-terminal '#,(or emit non-terminal-name)
                                (parse-alternatives . #,alternatives))))
         #,@(if (and emit (not (syntax-local-value emit (λ () #f))))
-               (list #`(define-syntax (#,emit stx)
-                         (syntax-parse stx
-                           [x:id #'add-words]
-                           [(x . y) #'(app add-words . y)])))
+               (list #`(define-syntax #,emit (emit-transformer 1 #'add-words)))
                (list))
         (define-syntax #,non-terminal-name
           (nt-compile-info
            #'the-promise
-           (λ (stx)
-             (syntax-case stx ()
-               [x (identifier? #'x) #'add-words]
-               [(x . y) #'(app add-words . y)])))))))
+           (emit-transformer 2 #'add-words))))))
 
 
 ;                                                        
@@ -190,18 +218,10 @@
     [(_ #:only-last something:id more ...)
      #'(cons (alternative #f #t #f (get-promise something))
              (parse-alternatives more ...))]
-    [(_ #:only-last whatever ...)
-     (raise-syntax-error 'alternative
-                         "#:only-last misplaced"
-                         (list-ref (syntax->list stx) 1))]
-    [(_ #:not-last whatever ...)
-     (raise-syntax-error 'alternative
-                         "#:not-last misplaced"
-                         (list-ref (syntax->list stx) 1))]
     [(_ #:comma something:id more ...)
      #'(cons (alternative #f #f #t (get-promise something))
              (parse-alternatives more ...))]
-    [(_ something more ...)
+    [(_ something:id more ...)
      #'(cons (alternative #f #f #f (get-promise something))
              (parse-alternatives more ...))]
     [(_) #''()]))
@@ -219,14 +239,8 @@
 (define-syntax (starters stx)
   (syntax-parse stx
     [(starters (a ...) ...)
-     (with-syntax ([structured-haiku/e-promise (datum->syntax stx 'structured-haiku/e-promise)]
-                   [haiku/e-promise (datum->syntax stx 'haiku/e-promise)])
-       #'(begin
-           (define structured-haiku/e-promise (delay (or/e (starter a ...) ...)))
-           (define haiku/e-promise
-             (delay
-               (pam/e structured-haiku-to-string #:contract string?
-                      (force structured-haiku/e-promise))))))]))
+     (with-syntax ([structured-haiku/e-promise (datum->syntax stx 'structured-haiku/e-promise)])
+       #'(define structured-haiku/e-promise (delay (or/e (starter a ...) ...))))]))
 
 (define-syntax (starter stx)
   (with-syntax ([beats-map-id (syntax-parameter-value #'beats-map-id-param)]
@@ -327,11 +341,11 @@
           (let loop ([words (filter string? (flatten e))])
             (match words
               [(list word "\n" "," more ...)
-               (list* word ",\n " (loop more))]
+               (list* word ",\n" (loop more))]
               [(list word "\n")
                (list word "\n")]
               [(list word "\n" more ...)
-               (list* word "\n " (loop more))]
+               (list* word "\n" (loop more))]
               [(list word "," more ...)
                (list* word ", " (loop more))]
               [(list "\n") (list "\n")]
